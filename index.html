@@ -378,7 +378,10 @@ async function fetchFin(code){
   const profRows=finR.filter(x=>x.type==='IncomeAfterTaxes').sort((a,b)=>b.date.localeCompare(a.date)).slice(0,4);
   const minRows =finR.filter(x=>x.type==='NoncontrollingInterests').sort((a,b)=>b.date.localeCompare(a.date)).slice(0,4);
   const ttmP=profRows.reduce((s,x)=>s+parseFloat(x.value||0),0);
-  const ttmM=minRows.reduce((s,x)=>s+parseFloat(x.value||0),0);
+  // H91 = 最近「完整年」的少數股東（原版用年度值，非TTM4季加總）
+  // 對大多數公司少數股東很小，但計算方式影響EPS精確度
+  const lastFullYr=String(yr-1);
+  const ttmM=minMap[lastFullYr]||0; // 用去年全年少數股東
   let ttmEPS=null;
   if(capNow>0){const e=(ttmP-ttmM)/(capNow/10);if(e>0)ttmEPS=Math.round(e*100)/100;}
   let predROE=null;
