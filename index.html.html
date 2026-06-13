@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>盈再表</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f0f2f5;--card:#fff;--navy:#1a2340;--navy2:#1e2a4a;
+  --text:#1a1a2e;--text2:#3a3a4a;--gray:#7a7a8a;
+  --green:#0a7a3e;--red:#c0392b;--blue:#2563eb;--yellow:#d97706;
+  --border:#e2e6ea;--mono:'IBM Plex Mono',monospace;
+}
+html,body{height:100%;font-family:'Noto Sans TC',system-ui,sans-serif;background:var(--bg);color:var(--text2);font-size:13px}
+
+/* NAV */
+nav{background:var(--navy);height:46px;display:flex;align-items:center;padding:0 16px;gap:8px;position:sticky;top:0;z-index:100;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.logo{color:#fff;font-size:15px;font-weight:700;margin-right:8px}
+.ntab{background:none;border:none;color:#9aa5be;padding:5px 12px;border-radius:4px;cursor:pointer;font-size:13px;font-family:inherit}
+.ntab:hover,.ntab.on{background:rgba(255,255,255,.15);color:#fff}
+.nav-r{margin-left:auto;display:flex;gap:6px;align-items:center}
+.nbtn{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;padding:5px 12px;border-radius:5px;cursor:pointer;font-size:12px;font-family:inherit;white-space:nowrap}
+.nbtn:hover{background:rgba(255,255,255,.2)}
+.nbtn.g{background:#16a34a;border-color:#15803d}
+.nbtn.b{background:var(--blue);border-color:#1d4ed8}
+
+/* pages */
+.page{display:none}.page.on{display:block}
+.wrap{padding:10px 14px;max-width:1800px;margin:0 auto}
+
+/* status bar */
+.statusbar{background:#fffbe6;border:1px solid #fcd34d;border-radius:5px;padding:5px 12px;font-size:12px;color:#92400e;margin-bottom:8px;display:none;align-items:center;gap:6px}
+.statusbar.on{display:flex}
+
+/* stock block — 4 columns */
+.sblock{background:var(--card);border:1px solid var(--border);border-radius:8px;margin-bottom:10px;overflow:hidden;display:grid;grid-template-columns:190px 380px 1fr 1fr}
+
+/* col1 equity */
+.eq{border-right:1px solid var(--border);padding:10px 12px;display:flex;flex-direction:column;gap:5px}
+.eq-badge{background:var(--navy2);color:#79c0ff;border-radius:4px;padding:2px 8px;font:600 13px var(--mono);display:inline-block}
+.eq-name{font-size:13px;font-weight:600;color:var(--blue)}
+.eq-price{font:700 24px var(--mono);line-height:1.2}
+.eq-chart{height:54px;border-radius:4px;overflow:hidden;background:#f8f9fa;position:relative;margin:2px 0}
+.eq-chart canvas{position:absolute;inset:0;width:100%!important;height:100%!important}
+.eq-acts{margin-top:auto;display:flex;flex-direction:column;gap:1px}
+.ea{background:none;border:none;color:var(--blue);font-size:11px;cursor:pointer;text-align:left;padding:1px 0;font-family:inherit}
+.ea:hover{text-decoration:underline}
+.ea.red{color:var(--red)}
+
+/* col2 盈再表 */
+.yz{border-right:1px solid var(--border);display:flex;flex-direction:column}
+.yz-km{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--border)}
+.yz-kc{padding:6px;text-align:center;border-right:1px solid var(--border)}
+.yz-kc:last-child{border-right:none}
+.yz-lbl{font-size:10px;color:var(--gray);font-weight:500;margin-bottom:2px}
+.yz-val{font:700 20px var(--mono);line-height:1.2}
+.yz-tbl{flex:1}
+.yz-tbl table{width:100%;border-collapse:collapse;font-size:11.5px}
+.yz-tbl th{padding:3px 7px;color:var(--gray);font-size:11px;font-weight:600;border-bottom:1px solid var(--border);background:#f8f9fa;text-align:right}
+.yz-tbl th:first-child{text-align:left}
+.yz-tbl td{padding:3px 7px;border-bottom:1px solid #f0f2f5;text-align:right;font-family:var(--mono)}
+.yz-tbl td:first-child{text-align:left;font-family:inherit;color:var(--gray);font-size:11px}
+.yz-tbl tr.cur{background:#fffde7}
+.yz-tbl tr.pred{background:#f0fff4}
+.yz-tbl tr:hover td{background:#f0f4ff}
+.yz-foot{padding:4px 8px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:10px;color:var(--gray);background:#f8f9fa;margin-top:auto}
+.yz-foot .px{font:700 11px var(--mono);color:var(--text)}
+
+/* col3/4 */
+.news-col,.hold-col{border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.hold-col{border-right:none}
+.tabbar{display:flex;border-bottom:1px solid var(--border);background:#f8f9fa;flex-shrink:0}
+.tb{background:none;border:none;padding:6px 14px;font-size:12px;font-family:inherit;font-weight:500;color:var(--gray);cursor:pointer;border-bottom:2px solid transparent}
+.tb.on{color:var(--blue);border-bottom-color:var(--blue)}
+.news-body,.hold-scroll{overflow-y:auto;flex:1;max-height:240px}
+.ni{padding:8px 10px;border-bottom:1px solid #f0f2f5;cursor:pointer}
+.ni:hover{background:#f5f8ff}
+.ni-t{font-size:11.5px;color:var(--blue);line-height:1.4;margin-bottom:2px}
+.ni-d{font-size:10px;color:var(--gray)}
+.prof-body{padding:10px 12px;font-size:12px;overflow-y:auto;flex:1}
+.htbl{width:100%;border-collapse:collapse;font-size:11px}
+.htbl th{padding:3px 6px;color:var(--gray);background:#f8f9fa;border-bottom:1px solid var(--border);text-align:right;font-weight:500;white-space:nowrap}
+.htbl th:first-child{text-align:left}
+.htbl td{padding:3px 6px;border-bottom:1px solid #f0f2f5;text-align:right;font-family:var(--mono);font-size:11px}
+.htbl td:first-child{text-align:left;font-family:inherit;color:var(--gray)}
+.htbl tr:hover td{background:#f5f8ff}
+
+/* colors */
+.g{color:var(--green)}.r{color:var(--red)}.b{color:var(--blue)}.y{color:var(--yellow)}.m{color:var(--gray)}
+
+/* modal */
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center}
+.ov.on{display:flex}
+.modal{background:#fff;border-radius:8px;padding:20px;width:90%;max-width:460px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.2)}
+.modal h3{font-size:14px;font-weight:600;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.fg{margin-bottom:9px}
+.fg label{display:block;font-size:11px;color:var(--gray);margin-bottom:2px;font-weight:500}
+.fg input,.fg select{width:100%;border:1px solid #c8cdd5;border-radius:4px;padding:6px 8px;font-size:13px;font-family:inherit}
+.fg input:focus,.fg select:focus{outline:none;border-color:var(--blue)}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mfoot{display:flex;gap:6px;justify-content:flex-end;margin-top:14px}
+.btn{padding:5px 14px;border-radius:5px;border:1px solid #c8cdd5;background:#fff;color:var(--text);cursor:pointer;font-size:12px;font-family:inherit}
+.btn:hover{background:#f8f9fa}
+.btn.p{background:var(--blue);border-color:#1d4ed8;color:#fff}
+.btn.g2{background:var(--green);border-color:#065f46;color:#fff}
+
+.spin{display:inline-block;width:10px;height:10px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:sp .6s linear infinite;vertical-align:middle}
+@keyframes sp{to{transform:rotate(360deg)}}
+.toast{position:fixed;bottom:20px;right:20px;padding:8px 16px;border-radius:6px;font-size:13px;font-weight:600;opacity:0;transition:opacity .25s;z-index:999;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,.2)}
+.toast.on{opacity:1}
+.empty{text-align:center;padding:48px;color:var(--gray);background:#fff;border-radius:8px;border:1px solid var(--border)}
+
+/* SOP */
+.sop-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:12px 14px;max-width:1400px;margin:0 auto}
+.sop-card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:14px}
+.sop-card h3{font-size:13px;font-weight:600;color:var(--green);margin-bottom:10px;padding-bottom:7px;border-bottom:1px solid var(--border)}
+.cf{font:400 11px var(--mono);background:#f6f8fa;border-left:3px solid var(--green);padding:10px;border-radius:0 4px 4px 0;line-height:2;overflow-x:auto}
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="logo">盈再表</span>
+  <div style="display:flex;gap:2px">
+    <button class="ntab on" onclick="showPage('wl',this)">收藏</button>
+    <button class="ntab" onclick="showPage('sop',this)">SOP</button>
+  </div>
+  <div class="nav-r">
+    <button class="nbtn" id="btn-px" onclick="updateAllPx()">⟳ 更新股價</button>
+    <button class="nbtn b" id="btn-fin" onclick="fetchAllFin()">🔄 自動抓財務</button>
+    <button class="nbtn g" onclick="openAdd()">＋ 新增個股</button>
+  </div>
+</nav>
+
+<div class="page on" id="page-wl">
+  <div class="wrap">
+    <div class="statusbar" id="sbar"><span class="spin"></span><span id="sbar-txt"></span></div>
+    <div id="slist"></div>
+    <div id="empty" class="empty" style="display:none">
+      <div style="font-size:28px;margin-bottom:8px">📋</div>
+      <p>尚無自選股，點右上角「＋ 新增個股」</p>
+    </div>
+  </div>
+</div>
+
+<div class="page" id="page-sop">
+  <div class="sop-grid">
+    <div class="sop-card">
+      <h3>核心公式（對應原版 Excel）</h3>
+      <div class="cf">
+ROE%  = 年常利 / 去年底淨值 × 100
+EPS   = TTM近4季常利 / 股本 × 10
+NAV   = 母公司淨值 / 股本 × 10（去年底）
+
+淑價  = EPS × 30 ÷ (1.15)^8   [PER法]
+貴價  = EPS × 30               [PER法]
+      或 NPV(15%) / NPV(0%)    [IRR法]
+
+盈再% = (固資+長投 4年增量) / 4年常利 × 100
+配息% = 股息 × 股本/10 / 前年常利 × 100</div>
+    </div>
+    <div class="sop-card">
+      <h3>溫度計判讀</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <tr><td style="padding:5px 0" class="g">🟢 淑（便宜）</td><td>股價 ≤ 淑價 → 考慮買進</td></tr>
+        <tr><td style="padding:5px 0" class="y">🟡 中間</td><td>淑 &lt; 股 &lt; 貴 → 持有觀望</td></tr>
+        <tr><td style="padding:5px 0" class="r">🔴 貴（昂貴）</td><td>股價 ≥ 貴價 → 考慮賣出</td></tr>
+      </table>
+      <div style="margin-top:10px;background:#f0fff4;border-radius:5px;padding:8px 10px;font-size:12px;color:var(--green)">
+        💡 淑買貴賣，長期必能獲利。選ROE>15%、商業模式穩定的公司。
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 新增/編輯 Modal -->
+<div class="ov" id="stock-modal">
+  <div class="modal">
+    <h3 id="m-title">新增個股</h3>
+    <div class="fr">
+      <div class="fg"><label>股票代號 *</label><input id="m-code" placeholder="2330"></div>
+      <div class="fg"><label>市場</label><select id="m-mkt"><option value="tw">🇹🇼 台股</option><option value="us">🇺🇸 美股</option></select></div>
+    </div>
+    <div class="fg"><label>公司名稱</label><input id="m-name" placeholder="台積電"></div>
+    <div class="fg" style="background:#fffde7;border-radius:5px;padding:8px 10px;font-size:11px;color:#92400e">
+      💡 代號填好後點「自動抓財務」即可，淑/貴價會自動計算。如需手動覆蓋：
+    </div>
+    <div class="fr">
+      <div class="fg"><label>淑價（手動覆蓋，留空自動算）</label><input type="number" id="m-cheap" placeholder="自動計算"></div>
+      <div class="fg"><label>貴價（手動覆蓋，留空自動算）</label><input type="number" id="m-pricey" placeholder="自動計算"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" onclick="closeM('stock-modal')">取消</button>
+      <button class="btn p" onclick="saveStock()">儲存</button>
+    </div>
+    <input type="hidden" id="m-id">
+  </div>
+</div>
+
+<!-- 買進記錄 Modal -->
+<div class="ov" id="hold-modal">
+  <div class="modal">
+    <h3>新增買進記錄</h3>
+    <div class="fr">
+      <div class="fg"><label>買進日期</label><input type="date" id="h-dt"></div>
+      <div class="fg"><label>買進價格</label><input type="number" id="h-bp"></div>
+    </div>
+    <div class="fr">
+      <div class="fg"><label>股數</label><input type="number" id="h-sh" placeholder="1000"></div>
+      <div class="fg"><label>備註</label><input id="h-nt"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" onclick="closeM('hold-modal')">取消</button>
+      <button class="btn p" onclick="saveHold()">儲存</button>
+    </div>
+    <input type="hidden" id="h-sid">
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+// ================================================================
+// CONFIG
+// ================================================================
+const FM='eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoic2FuZWkwMjE2IiwiZW1haWwiOiJzYW5laTAyMTZAZ21haWwuY29tIiwidG9rZW5fdmVyc2lvbiI6MH0.-VLDsxQVc_r1-SVVdtgf5EcQv40E-lsnbwjfeeszoi4';
+
+// ================================================================
+// 資料架構：
+// s.fin = 從 FinMind 抓到的原始財務數據（不存 cheap/pricey）
+// s.overrideCheap / s.overridePricey = 用戶手動輸入的覆蓋值
+// 淑/貴/IRR 永遠在 render 時即時計算
+// ================================================================
+function loadStocks(){
+  const seen=new Set(),all=[];
+  ['yz3_stocks','yz2_stocks','yz_stocks'].forEach(k=>{
+    try{JSON.parse(localStorage.getItem(k)||'[]').forEach(s=>{
+      const uid=s.code+'_'+(s.market||'tw');
+      if(!seen.has(uid)){seen.add(uid);all.push(migrate(s));}
+    });}catch{}
+  });
+  return all;
+}
+
+// 舊資料遷移
+function migrate(s){
+  if(!s.fin) s.fin={};
+  // 把舊欄位移到 fin
+  ['eps','nav','navCalc','roe','predROE','div','k11','firstDiv','history'].forEach(k=>{
+    if(s[k]!=null&&s.fin[k]==null) s.fin[k]=s[k];
+  });
+  // 舊的 cheap/pricey 如果是手動設定的，保留為 override
+  if(!s.overrideCheap&&s.cheap>0) s.overrideCheap=s.cheap;
+  if(!s.overridePricey&&s.pricey>0) s.overridePricey=s.pricey;
+  return s;
+}
+
+let S=loadStocks();
+function save(){localStorage.setItem('yz3_stocks',JSON.stringify(S));}
+save();
+
+// ================================================================
+// API FETCH
+// ================================================================
+async function fmFetch(params){
+  const url='https://api.finmindtrade.com/api/v4/data?'+new URLSearchParams({...params,token:FM});
+  const ctrl=new AbortController();
+  const tid=setTimeout(()=>ctrl.abort(),25000);
+  try{
+    const r=await fetch(url,{signal:ctrl.signal});
+    clearTimeout(tid);
+    if(r.ok) return r.json();
+  }catch(e){clearTimeout(tid);console.warn('fmFetch:',e?.message);}
+  return null;
+}
+
+async function priceFetch(code){
+  // TWSE mis
+  for(const ex of['tse','otc']){
+    try{
+      const ctrl=new AbortController();
+      setTimeout(()=>ctrl.abort(),8000);
+      const r=await fetch(`https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=${ex}_${code}.tw&json=1&delay=0`,{signal:ctrl.signal});
+      if(r.ok){const d=await r.json();const i=d?.msgArray?.[0];if(i){const p=parseFloat(i.z!=='-'?i.z:i.y);if(p>0)return p;}}
+    }catch{}
+  }
+  // FinMind Price fallback
+  const yr=new Date().getFullYear();
+  const d=await fmFetch({dataset:'TaiwanStockPrice',data_id:code,start_date:`${yr}-01-01`});
+  const rows=d?.data||[];
+  if(rows.length) return parseFloat(rows[rows.length-1].close)||null;
+  return null;
+}
+
+// ================================================================
+// 財務抓取 — 回傳 raw fin 物件
+// ================================================================
+async function fetchFin(code){
+  const yr=new Date().getFullYear(), st=`${yr-15}-01-01`;
+  const [finR,divR,balR,pxR]=await Promise.all([
+    fmFetch({dataset:'TaiwanStockFinancialStatements',data_id:code,start_date:st}).then(d=>d?.data||[]),
+    fmFetch({dataset:'TaiwanStockDividend',data_id:code,start_date:st}).then(d=>d?.data||[]),
+    fmFetch({dataset:'TaiwanStockBalanceSheet',data_id:code,start_date:st}).then(d=>d?.data||[]),
+    fmFetch({dataset:'TaiwanStockPrice',data_id:code,start_date:`${yr-2}-01-01`}).then(d=>d?.data||[]),
+  ]);
+  if(!finR.length&&!divR.length) return null;
+
+  const curYr=String(yr);
+
+  // 工具
+  const balByYear=type=>{
+    const m={};
+    balR.filter(x=>x.type===type).sort((a,b)=>a.date.localeCompare(b.date))
+      .forEach(x=>{const y=x.date?.slice(0,4);if(y)m[y]=parseFloat(x.value||0);});
+    return m;
+  };
+  const balLatest=type=>{
+    const rows=balR.filter(x=>x.type===type).sort((a,b)=>b.date.localeCompare(a.date));
+    return rows.length?parseFloat(rows[0].value||0):0;
+  };
+  const finSum=type=>{
+    const m={};
+    finR.filter(x=>x.type===type).forEach(x=>{
+      const y=x.date?.slice(0,4);
+      if(!y) return;
+      if(y===curYr){
+        // 今年：只取最新一季（標 xt）
+        if(!m['_d_'+y]||x.date>m['_d_'+y]){m[y+'t']=parseFloat(x.value||0);m['_d_'+y]=x.date;}
+      } else {
+        m[y]=(m[y]||0)+parseFloat(x.value||0);
+      }
+    });
+    Object.keys(m).filter(k=>k.startsWith('_')).forEach(k=>delete m[k]);
+    return m;
+  };
+
+  const eqMap  = balByYear('Equity');
+  const meqMap = balByYear('EquityAttributableToOwnersOfParent');
+  const capMap = balByYear('CapitalStock');
+  const ppMap  = balByYear('PropertyPlantAndEquipment');
+  const ltMap  = {};
+  ['InvestmentAccountedForUsingEquityMethod',
+   'FinancialAssetsAtFairvalueThroughOtherComprehensiveIncomeNonCurrent',
+   'FinancialAssetsAtAmortisedCostNonCurrent'].forEach(type=>{
+    const m=balByYear(type);
+    Object.keys(m).forEach(y=>{ltMap[y]=(ltMap[y]||0)+m[y];});
+  });
+
+  const profMap = finSum('IncomeAfterTaxes');
+  const minMap  = finSum('NoncontrollingInterests');
+  const epsMap  = finSum('EPS');
+
+  // NAV — 顯示用（最新季），計算用（去年底）
+  // 優先用 EquityAttributableToOwnersOfParent，fallback 用 Equity
+  const meqNow=balLatest('EquityAttributableToOwnersOfParent');
+  const eqNow =balLatest('Equity');
+  const capNow=balLatest('CapitalStock');
+  const navEqNow=meqNow>0?meqNow:eqNow;
+  let nav=navEqNow>0&&capNow>0?Math.round(navEqNow/(capNow/10)*10)/10:null;
+
+  const lastYr=String(yr-1);
+  const meqLY=(meqMap[lastYr]>0?meqMap[lastYr]:0)||(eqMap[lastYr]||0);
+  const capLY=capMap[lastYr]||capNow;
+  let navCalc=nav;
+  if(meqLY>0&&capLY>0){const n=meqLY/(capLY/10);if(n>1&&n<100000)navCalc=Math.round(n*10)/10;}
+
+  // ROE（去年底淨值）
+  const roeMap={};
+  Object.keys(profMap).filter(y=>!y.endsWith('t')).sort().forEach(y=>{
+    const py=String(+y-1);
+    const profit=profMap[y]-(minMap[py]||0);
+    const prevEq=(meqMap[py]>0?meqMap[py]:0)||(eqMap[py]||0);
+    if(prevEq>0) roeMap[y]=profit/prevEq*100;
+  });
+
+  // TTM EPS 和預期ROE（對應原版 X15, V13）
+  const profRows=finR.filter(x=>x.type==='IncomeAfterTaxes').sort((a,b)=>b.date.localeCompare(a.date)).slice(0,4);
+  const minRows =finR.filter(x=>x.type==='NoncontrollingInterests').sort((a,b)=>b.date.localeCompare(a.date)).slice(0,4);
+  const ttmP=profRows.reduce((s,x)=>s+parseFloat(x.value||0),0);
+  const ttmM=minRows.reduce((s,x)=>s+parseFloat(x.value||0),0);
+  let ttmEPS=null;
+  if(capNow>0){const e=(ttmP-ttmM)/(capNow/10);if(e>0)ttmEPS=Math.round(e*100)/100;}
+  let predROE=null;
+  if(meqLY>0){predROE=Math.round((ttmP-ttmM)/meqLY*1000)/10;}
+
+  // 股息（除息年份）
+  const divMap={},stMap={};
+  divR.forEach(x=>{
+    const y=(x.CashExDividendTradingDate||x.date||'').slice(0,4);
+    if(!y||y<'2010') return;
+    const c=parseFloat(x.CashEarningsDistribution||0),s2=parseFloat(x.StockEarningsDistribution||0);
+    if(c>0)divMap[y]=(divMap[y]||0)+c;
+    if(s2>0)stMap[y]=(stMap[y]||0)+s2;
+  });
+
+  // 盈再%（原版D欄）
+  const prMap={};
+  const hasCapex=Object.keys(ppMap).length>3;
+  Object.keys(profMap).filter(y=>!y.endsWith('t')).sort().forEach(y=>{
+    if(hasCapex){
+      const y4=String(+y-4);
+      const cn=(ppMap[y]||0)+(ltMap[y]||0),cp=(ppMap[y4]||0)+(ltMap[y4]||0);
+      const p4=[0,-1,-2,-3].reduce((s,d)=>{const yy=String(+y+d);return s+(profMap[yy]||0)+(minMap[yy]||0);},0);
+      if(p4>0){prMap[y]=Math.round(100*(cn-cp)/p4);return;}
+    }
+    const e=epsMap[y]||0,d=divMap[y]||0;
+    if(e>0)prMap[y]=Math.round((1-d/e)*100);
+  });
+
+  // 配息%（原版F欄，用前年股本）
+  const drMap={};
+  Object.keys(divMap).sort().forEach(y=>{
+    const py=String(+y-1);
+    const cap=capMap[py]||capMap[y]||capNow;
+    const pp=profMap[py]-(minMap[py]||0);
+    if(cap>0&&pp>0){drMap[y]=Math.round(divMap[y]*(cap/10)/pp*100);return;}
+    const e=epsMap[py]||epsMap[y];
+    if(e>0)drMap[y]=Math.round(divMap[y]/e*100);
+  });
+
+  // 近3年股息中位數（Y2，NAV序列第一年股息）
+  const divYrs=Object.keys(divMap).sort().reverse();
+  const r3d=divYrs.slice(0,3).map(y=>divMap[y]).filter(v=>v>0).sort((a,b)=>a-b);
+  const firstDiv=r3d.length?r3d[Math.floor(r3d.length/2)]:(divYrs[0]?divMap[divYrs[0]]:0);
+
+  // K11 預期配息率
+  const r3dr=divYrs.slice(0,3).map(y=>drMap[y]/100).filter(v=>v>0&&v<5);
+  const latestPr=Object.keys(prMap).sort().reverse()[0];
+  const prNow=latestPr?prMap[latestPr]:0;
+  const medDr=r3dr.length?r3dr.sort((a,b)=>a-b)[Math.floor(r3dr.length/2)]:0.65;
+  const k11=Math.max((medDr+(prNow/100))/2,(r3dr.length?Math.min(...r3dr):0.65)*0.9,0.45);
+
+  // 最新股息
+  const latestDiv=divYrs.reduce((v,y)=>v||divMap[y],0);
+  const latestROE=Object.keys(roeMap).sort().reverse().reduce((v,y)=>v||roeMap[y],null);
+  const latestPx=pxR?.length?parseFloat(pxR[pxR.length-1].close):null;
+
+  // 高低+還原股價
+  const prYMap={};
+  pxR?.forEach(p=>{
+    const y=p.date?.slice(0,4);if(!y)return;
+    if(!prYMap[y])prYMap[y]={hi:-Infinity,lo:Infinity,last:0};
+    prYMap[y].hi=Math.max(prYMap[y].hi,parseFloat(p.max||0));
+    prYMap[y].lo=Math.min(prYMap[y].lo,parseFloat(p.min||999999));
+    prYMap[y].last=parseFloat(p.close||0);
+  });
+  const restMap={};
+  const pxYrs=Object.keys(prYMap).sort().reverse();
+  if(pxYrs.length){
+    restMap[pxYrs[0]]=prYMap[pxYrs[0]].last;
+    for(let i=1;i<pxYrs.length;i++){
+      const ty=pxYrs[i],ny=pxYrs[i-1];
+      restMap[ty]=Math.round(((restMap[ny]||0)*(1+(stMap[ny]||0)/10)+(divMap[ny]||0))*10)/10;
+    }
+  }
+
+  // 歷年
+  const allYrs=[...new Set([...Object.keys(profMap),...Object.keys(roeMap),...Object.keys(epsMap),...Object.keys(divMap)])]
+    .filter(y=>!y.startsWith('_')).sort().slice(-11);
+  const hist=allYrs.map(y=>{
+    const isCurT=y.endsWith('t'),yk=isCurT?y.slice(0,-1):y;
+    const e=epsMap[y]||0,d=divMap[y]||0,r=roeMap[y],pm=profMap[y],ph=prYMap[yk];
+    return{year:y,roe:r!=null?Math.round(r*10)/10:null,
+      pr:prMap[y]!=null?prMap[y]:null,divRate:drMap[y]!=null?drMap[y]:null,
+      profit:pm!=null?Math.round(pm/1e6):null,div:d>0?Math.round(d*100)/100:0,
+      stock:stMap[y]||0,high:ph?.hi>0?ph.hi.toFixed(1):null,
+      low:ph?.lo<999999?ph.lo.toFixed(1):null,restore:restMap[yk]||null,eps:e||null};
+  }).slice(-10);
+
+  return{nav,navCalc,predROE,ttmEPS,roe:latestROE,div:latestDiv,price:latestPx,hist,firstDiv,k11};
+}
+
+// ================================================================
+// 計算引擎 — 淑/貴/IRR 即時計算（對應原版Excel）
+// ================================================================
+function buildNAV(nav0,roe,firstDiv,k11,years=8){
+  const rD=roe/100;
+  const navs=[nav0],epss=[nav0*rD],divs=[firstDiv];
+  for(let i=1;i<years;i++){
+    const nn=navs[i-1]+epss[i-1]-divs[i-1];
+    navs.push(nn);epss.push(nn*rD);divs.push(epss[i-1]*k11);
+  }
+  return{navs,epss,divs};
+}
+function npvAt(rate,cfs){return cfs.reduce((s,c,i)=>s+c/(1+rate)**(i+1),0);}
+function calcIRR(cfs,g=0.1){
+  let r=g;
+  for(let i=0;i<200;i++){
+    let f=0,df=0;
+    cfs.forEach((c,t)=>{f+=c/(1+r)**t;df-=t*c/(1+r)**(t+1);});
+    if(Math.abs(df)<1e-10)break;
+    const nr=r-f/df;if(Math.abs(nr-r)<1e-7)return nr;
+    r=Math.max(-0.9,Math.min(nr,10));
+  }
+  return r;
+}
+
+// 主計算（對應 V17-V20）
+function calcYZ(price,nav,roe,firstDiv,k11){
+  if(!nav||!roe) return{cheap:null,pricey:null,irr:null,method:'—'};
+  const{epss,divs}=buildNAV(nav,roe,firstDiv,k11);
+  const terminal=epss[7]*12;
+  const future=[...divs.slice(0,7),divs[7]+terminal];
+  // IRR法
+  const irrCheap=npvAt(0.15,future);
+  const irrPricey=npvAt(0,future);
+  // PER法
+  const eps0=nav*(roe/100);
+  const perCheap=eps0*30/Math.pow(1.15,8);
+  const perPricey=eps0*30;
+  // 選擇（差>20%用PER）
+  const avgI=(irrCheap+irrPricey)/2,avgP=(perCheap+perPricey)/2;
+  const usePER=avgP>0&&Math.abs(avgI-avgP)/avgP>0.20;
+  const cheap=usePER?perCheap:irrCheap;
+  const pricey=usePER?perPricey:irrPricey;
+  // IRR報酬率
+  let irr=null;
+  if(price>0){const r=calcIRR([-price,...future]);if(!isNaN(r)&&r>-0.5&&r<5)irr=Math.round(r*100);}
+  return{cheap:Math.round(cheap),pricey:Math.round(pricey),irr,method:usePER?'PER':'IRR'};
+}
+
+// ================================================================
+// UI
+// ================================================================
+function showPage(p,el){
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.ntab').forEach(x=>x.classList.remove('on'));
+  document.getElementById('page-'+p).classList.add('on');el.classList.add('on');
+}
+function toast(msg,err){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.style.background=err?'#c0392b':'#0a6e3f';t.style.color='#fff';
+  t.classList.add('on');setTimeout(()=>t.classList.remove('on'),3500);
+}
+function setStatus(msg){const s=document.getElementById('sbar');
+  if(msg){document.getElementById('sbar-txt').textContent=msg;s.classList.add('on');}
+  else s.classList.remove('on');}
+function closeM(id){document.getElementById(id).classList.remove('on');}
+const delay=ms=>new Promise(r=>setTimeout(r,ms));
+
+// CRUD
+function openAdd(){
+  ['m-code','m-name','m-cheap','m-pricey','m-id'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('m-mkt').value='tw';
+  document.getElementById('m-title').textContent='新增個股';
+  document.getElementById('stock-modal').classList.add('on');
+}
+function editStock(id){
+  const s=S.find(x=>x.id===id);if(!s)return;
+  document.getElementById('m-id').value=s.id;
+  document.getElementById('m-code').value=s.code;
+  document.getElementById('m-mkt').value=s.market||'tw';
+  document.getElementById('m-name').value=s.name||'';
+  document.getElementById('m-cheap').value=s.overrideCheap||'';
+  document.getElementById('m-pricey').value=s.overridePricey||'';
+  document.getElementById('m-title').textContent='編輯個股';
+  document.getElementById('stock-modal').classList.add('on');
+}
+function saveStock(){
+  const id=document.getElementById('m-id').value;
+  const code=document.getElementById('m-code').value.trim().toUpperCase();
+  if(!code){toast('請輸入代號',true);return;}
+  const old=id?S.find(x=>x.id===id):null;
+  const s={
+    id:id||Date.now().toString(),code,market:document.getElementById('m-mkt').value,
+    name:document.getElementById('m-name').value||code,
+    overrideCheap:parseFloat(document.getElementById('m-cheap').value)||0,
+    overridePricey:parseFloat(document.getElementById('m-pricey').value)||0,
+    fin:old?.fin||{},holdings:old?.holdings||[],updated:old?.updated||'—'
+  };
+  if(id){const i=S.findIndex(x=>x.id===id);if(i>-1)S[i]=s;}else S.push(s);
+  save();render();closeM('stock-modal');toast('✅ 已儲存');
+}
+function delStock(id){if(!confirm('確定刪除？'))return;S=S.filter(x=>x.id!==id);save();render();toast('已刪除');}
+function openHold(sid){
+  document.getElementById('h-sid').value=sid;
+  document.getElementById('h-dt').value=new Date().toISOString().slice(0,10);
+  ['h-bp','h-sh','h-nt'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('hold-modal').classList.add('on');
+}
+function saveHold(){
+  const sid=document.getElementById('h-sid').value;const s=S.find(x=>x.id===sid);if(!s)return;
+  const dt=document.getElementById('h-dt').value,bp=parseFloat(document.getElementById('h-bp').value)||0;
+  if(!dt||!bp){toast('請填日期和買進價格',true);return;}
+  if(!s.holdings)s.holdings=[];
+  s.holdings.push({date:dt,price:bp,shares:parseFloat(document.getElementById('h-sh').value)||0,note:document.getElementById('h-nt').value});
+  save();render();closeM('hold-modal');toast('✅ 買進紀錄已新增');
+}
+function delHold(sid,i){const s=S.find(x=>x.id===sid);if(!s)return;s.holdings.splice(i,1);save();render();}
+
+// 股價更新
+async function updatePx(id){
+  const s=S.find(x=>x.id===id);if(!s)return;
+  setStatus(`⟳ ${s.code}...`);
+  const p=await priceFetch(s.code);
+  if(p>0){s.fin=s.fin||{};s.fin.price=p;s.updated=new Date().toLocaleDateString('zh-TW');save();render();toast(`✅ ${s.code}: ${p}`);}
+  else toast('❌ 股價失敗',true);
+  setStatus('');
+}
+async function updateAllPx(){
+  if(!S.length){toast('尚無個股',true);return;}
+  const btn=document.getElementById('btn-px');btn.innerHTML='<span class="spin"></span>';btn.disabled=true;
+  let ok=0,fail=0;
+  for(const s of S){
+    setStatus(`⟳ ${s.code} (${ok+fail+1}/${S.length})`);
+    const p=await priceFetch(s.code);
+    if(p>0){s.fin=s.fin||{};s.fin.price=p;s.updated=new Date().toLocaleDateString('zh-TW');ok++;}else fail++;
+    await delay(300);
+  }
+  save();render();btn.innerHTML='⟳ 更新股價';btn.disabled=false;setStatus('');
+  toast(`✅ ${ok}/${S.length} 更新`);
+}
+
+// 財務抓取
+async function fetchOneFin(id){
+  const s=S.find(x=>x.id===id);if(!s)return;
+  if(s.market!=='tw'){toast('財務抓取僅支援台股',true);return;}
+  setStatus(`🔄 ${s.code} 財務中...`);
+  try{
+    const fin=await Promise.race([
+      fetchFin(s.code),
+      new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),60000))
+    ]);
+    if(fin){
+      s.fin=fin;
+      s.updated=new Date().toLocaleDateString('zh-TW');
+      save();render();toast(`✅ ${s.name} 財務已更新`);
+    }else toast(`❌ ${s.code} 無資料`,true);
+  }catch(e){toast(`❌ ${s.code}: ${e.message}`,true);}
+  setStatus('');
+}
+async function fetchAllFin(){
+  const tw=S.filter(x=>x.market==='tw');if(!tw.length){toast('尚無台股',true);return;}
+  const btn=document.getElementById('btn-fin');btn.innerHTML='<span class="spin"></span> 抓取中...';btn.disabled=true;
+  let ok=0,fail=0;
+  for(let i=0;i<tw.length;i++){
+    const s=tw[i];setStatus(`🔄 ${s.code} ${s.name} (${i+1}/${tw.length})`);
+    try{
+      const fin=await Promise.race([fetchFin(s.code),new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),60000))]);
+      if(fin){s.fin=fin;s.updated=new Date().toLocaleDateString('zh-TW');ok++;}else fail++;
+    }catch(e){fail++;console.error(s.code,e);}
+    render();
+    if(i<tw.length-1)await delay(1500);
+  }
+  save();render();btn.innerHTML='🔄 自動抓財務';btn.disabled=false;setStatus('');
+  toast(`✅ ${ok} 成功${fail?` / ${fail} 失敗`:''}`,fail>0&&ok===0);
+}
+
+// ================================================================
+// RENDER — 純展示，計算在此發生
+// ================================================================
+function render(){
+  const el=document.getElementById('slist'),emp=document.getElementById('empty');
+  if(!S.length){el.innerHTML='';emp.style.display='block';return;}
+  emp.style.display='none';
+  el.innerHTML=S.map(s=>renderBlock(s)).join('');
+  S.forEach(s=>{drawSpark(s);});
+}
+
+function renderBlock(s){
+  const f=s.fin||{};
+  const p=f.price||0;
+  const curYr=new Date().getFullYear().toString();
+
+  // 即時計算淑/貴/IRR（每次 render 都重算，不依賴存檔值）
+  const nav=f.navCalc||f.nav||0;
+  const roe=f.predROE||f.roe||0;
+  const fd=f.firstDiv||f.div||0;
+  const k11=f.k11||0.65;
+  const yz=calcYZ(p,nav,roe,fd,k11);
+
+  // 若用戶有手動覆蓋，使用覆蓋值
+  const cheap=s.overrideCheap||yz.cheap||0;
+  const pricey=s.overridePricey||yz.pricey||0;
+  const irrVal=yz.irr;
+
+  const isCheap=p>0&&cheap>0&&p<=cheap;
+  const isPricey=p>0&&pricey>0&&p>=pricey;
+  const pcolor=isCheap?'var(--green)':isPricey?'var(--red)':'var(--text)';
+
+  const hist=f.hist||[];
+
+  // 歷年表
+  const histRows=hist.map(h=>{
+    const isCur=h.year===curYr||h.year===curYr+'t';
+    const rN=h.roe!=null?h.roe:0;
+    const rc=rN>=15?'g':rN<0?'r':'';
+    const prN=h.pr;const pc=prN!=null?(prN<0?'r':prN>=30&&prN<=70?'g':''):'';
+    const drN=h.divRate;const dc=drN!=null?(drN>100?'r':drN>0?'g':''):'';
+    return `<tr${isCur?' class="cur"':''}>
+      <td>${h.year}</td>
+      <td class="${rc}">${rN!=null?rN:'—'}</td>
+      <td class="${pc}">${prN!=null?prN:'—'}</td>
+      <td class="m">${h.profit!=null?h.profit+'m':'—'}</td>
+      <td class="${dc}">${drN!=null?drN:'—'}</td>
+    </tr>`;
+  }).join('');
+  const predRow=`<tr class="pred">
+    <td>預期</td>
+    <td>${roe?Math.round(roe*10)/10:'—'}</td>
+    <td>—</td>
+    <td class="m">${f.ttmEPS!=null?Math.round(f.ttmEPS*100)/100:'—'}</td>
+    <td class="g">${f.div||'—'}</td>
+  </tr>`;
+
+  // 還原股價
+  const restRows=hist.slice(-8).reverse().map(h=>{
+    const rN=h.roe||0,rc=rN>=15?'g':rN<0?'r':'';
+    return `<tr>
+      <td>${h.year}</td><td class="m">${h.low||'—'}</td><td class="m">${h.high||'—'}</td>
+      <td class="b">${h.restore!=null?h.restore:'—'}</td>
+      <td class="${rc}">${rN||'—'}</td><td class="g">${h.div||'—'}</td><td class="m">${h.stock||0}</td>
+    </tr>`;
+  }).join('')||`<tr><td colspan="7" class="m" style="text-align:center;padding:8px">點「🔄 自動抓財務」載入</td></tr>`;
+
+  // 持股損益
+  const hs=s.holdings||[];
+  const holdRows=hs.map((h,i)=>{
+    const yr=(Date.now()-new Date(h.date))/(365.25*864e5);
+    const xr=h.price>0&&p>0&&yr>0?(Math.pow(p/h.price,1/yr)-1)*100:0;
+    const col=xr>=15?'g':xr<0?'r':'y';
+    return `<tr>
+      <td>${h.date}<br><span class="m" style="font-size:10px">${h.note||''}</span></td>
+      <td class="${col}">${xr.toFixed(1)}</td><td>${h.price}</td>
+      <td>${p>0?p.toFixed(2):'—'}</td><td>${yr.toFixed(1)}</td>
+      <td>${h.price>0?(p/h.price).toFixed(2):'—'}
+        <button onclick="delHold('${s.id}',${i})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:10px">✕</button>
+      </td>
+    </tr>`;
+  }).join('')||`<tr><td colspan="6" class="m" style="text-align:center;padding:8px">尚無買進記錄</td></tr>`;
+
+  const today=new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'numeric'});
+  const mkt=s.market==='us'?'🇺🇸':'🇹🇼';
+  const navDisp=f.nav!=null?f.nav:'—';
+
+  return `<div class="sblock" id="row-${s.id}">
+  <div class="eq">
+    <div><span class="eq-badge">${s.code}</span></div>
+    <div class="eq-name">${s.name}</div>
+    <div class="eq-price" style="color:${pcolor}">${p>0?p.toFixed(2):'—'}</div>
+    <div class="eq-chart"><canvas id="spark-${s.id}"></canvas></div>
+    <div class="eq-acts">
+      <button class="ea" onclick="fetchOneFin('${s.id}')">🔄 自動抓財務</button>
+      <button class="ea" onclick="updatePx('${s.id}')">⟳ 更新股價</button>
+      <button class="ea" onclick="openHold('${s.id}')">Add to</button>
+      <button class="ea" onclick="editStock('${s.id}')">Edit</button>
+      <button class="ea red" onclick="delStock('${s.id}')">Delete</button>
+    </div>
+    <div style="font-size:12px;margin-top:3px">${mkt}</div>
+  </div>
+
+  <div class="yz">
+    <div class="yz-km">
+      <div class="yz-kc"><div class="yz-lbl">預期報酬%</div><div class="yz-val y">${irrVal!=null?irrVal:'—'}</div></div>
+      <div class="yz-kc"><div class="yz-lbl">淑價</div><div class="yz-val g">${cheap||'—'}</div></div>
+      <div class="yz-kc"><div class="yz-lbl">貴價</div><div class="yz-val r">${pricey||'—'}</div></div>
+      <div class="yz-kc"><div class="yz-lbl">NAV</div><div class="yz-val b">${navDisp}</div></div>
+    </div>
+    <div class="yz-tbl">
+      <table>
+        <thead><tr><th>${s.code}</th><th>ROE%</th><th>盈再%</th><th>常利$m</th><th>配息%</th></tr></thead>
+        <tbody>${hist.length?histRows+predRow:'<tr><td colspan="5" class="m" style="text-align:center;padding:10px">點「🔄 自動抓財務」載入10年資料</td></tr>'}</tbody>
+      </table>
+    </div>
+    <div class="yz-foot">
+      <span>${today}</span>
+      <span class="px">$ ${p>0?p.toFixed(2):'—'}</span>
+      <span>${s.updated||'—'}</span>
+    </div>
+  </div>
+
+  <div class="news-col">
+    <div class="tabbar">
+      <button class="tb on" onclick="switchTab(this,'news-${s.id}','prof-${s.id}')">News</button>
+      <button class="tb" onclick="switchTab(this,'prof-${s.id}','news-${s.id}')">Profile</button>
+    </div>
+    <div id="news-${s.id}" class="news-body">
+      <div class="ni"><div class="ni-t">📋 公開資訊觀測站</div>
+        <a href="https://mops.twse.com.tw/mops/web/t05st02?step=1&firstin=1&co_id=${s.code}" target="_blank" class="ni-d" style="color:var(--blue)">查看 ${s.name} 最新公告 →</a></div>
+      <div class="ni"><div class="ni-t">📊 Yahoo Finance</div>
+        <a href="https://finance.yahoo.com/quote/${s.code}.TW" target="_blank" class="ni-d" style="color:var(--blue)">查看股價走勢 →</a></div>
+    </div>
+    <div id="prof-${s.id}" class="prof-body" style="display:none">
+      <div style="display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:12px">
+        <span class="m">代號</span><span style="font-family:var(--mono)">${s.code}</span>
+        <span class="m">名稱</span><span>${s.name}</span>
+        <span class="m">ROE%</span><span class="${(roe||0)>=15?'g':''}" style="font-family:var(--mono)">${roe||'—'}</span>
+        <span class="m">TTM EPS</span><span style="font-family:var(--mono)">${f.ttmEPS||'—'}</span>
+        <span class="m">股息</span><span class="g" style="font-family:var(--mono)">${f.div||'—'}</span>
+        <span class="m">NAV(最新)</span><span class="b" style="font-family:var(--mono)">${navDisp}</span>
+        <span class="m">NAV(去年底)</span><span class="b" style="font-family:var(--mono)">${f.navCalc||'—'}</span>
+        <span class="m">淑價</span><span class="g" style="font-family:var(--mono)">${cheap||'—'}${s.overrideCheap?' (手動)':''}</span>
+        <span class="m">貴價</span><span class="r" style="font-family:var(--mono)">${pricey||'—'}${s.overridePricey?' (手動)':''}</span>
+        <span class="m">K11</span><span style="font-family:var(--mono)">${k11.toFixed(2)}</span>
+        <span class="m">方法</span><span>${yz.method}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="hold-col">
+    <div class="tabbar">
+      <button class="tb on" onclick="switchHold(this,'rst-${s.id}','hld-${s.id}')">還原股價</button>
+      <button class="tb" onclick="switchHold(this,'hld-${s.id}','rst-${s.id}')">持股損益</button>
+    </div>
+    <div id="rst-${s.id}">
+      <div style="border-bottom:1px solid var(--border);overflow-x:auto">
+        <table class="htbl">
+          <thead><tr><th style="text-align:left">買進日</th><th>年利%</th><th>買進價</th><th>現值</th><th>年</th><th>共漲</th></tr></thead>
+          <tbody>
+            <tr><td class="m">YYYY/M/D</td>
+              <td class="${irrVal&&irrVal>=15?'g':irrVal&&irrVal<0?'r':''}">${irrVal!=null?irrVal:'—'}</td>
+              <td>${p>0?p.toFixed(1):'—'}</td><td>${pricey||'—'}</td><td>8.0</td>
+              <td>${cheap&&pricey?(pricey/cheap).toFixed(2):'—'}</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="overflow-y:auto;max-height:200px">
+        <table class="htbl">
+          <thead><tr><th style="text-align:left">${s.code}</th><th>最低$</th><th>最高$</th><th>還原$</th><th>ROE%</th><th>股息$</th><th>股子</th></tr></thead>
+          <tbody>${restRows}</tbody>
+        </table>
+      </div>
+    </div>
+    <div id="hld-${s.id}" style="display:none">
+      <div class="tabbar" style="background:#fff">
+        <button class="tb on" onclick="switchHoldSub(this,'ret-${s.id}','add-${s.id}')">持股損益</button>
+        <button class="tb" onclick="switchHoldSub(this,'add-${s.id}','ret-${s.id}')">新增買賣</button>
+      </div>
+      <div id="ret-${s.id}" style="overflow-y:auto;max-height:220px">
+        <table class="htbl">
+          <thead><tr><th style="text-align:left">買進日</th><th>年利%</th><th>買進價</th><th>現值</th><th>年</th><th>共漲</th></tr></thead>
+          <tbody>${holdRows}</tbody>
+        </table>
+      </div>
+      <div id="add-${s.id}" style="display:none;padding:10px">
+        <button class="nbtn g" style="width:100%;justify-content:center" onclick="openHold('${s.id}')">＋ 新增買進</button>
+      </div>
+    </div>
+  </div>
+</div>`;
+}
+
+function switchTab(btn,show,hide){
+  btn.parentElement.querySelectorAll('.tb').forEach(b=>b.classList.remove('on'));btn.classList.add('on');
+  document.getElementById(show).style.display='';document.getElementById(hide).style.display='none';
+}
+function switchHold(btn,show,hide){
+  btn.parentElement.querySelectorAll('.tb').forEach(b=>b.classList.remove('on'));btn.classList.add('on');
+  document.getElementById(show).style.display='';document.getElementById(hide).style.display='none';
+}
+function switchHoldSub(btn,show,hide){
+  btn.parentElement.querySelectorAll('.tb').forEach(b=>b.classList.remove('on'));btn.classList.add('on');
+  document.getElementById(show).style.display='';document.getElementById(hide).style.display='none';
+}
+
+// Sparkline
+function drawSpark(s){
+  const cv=document.getElementById('spark-'+s.id);if(!cv)return;
+  const hist=s.fin?.hist||[];
+  const prices=hist.map(h=>h.restore||h.high||0).filter(v=>v>0);
+  if(prices.length<2)return;
+  const W=cv.parentElement.offsetWidth||160,H=54;
+  cv.width=W;cv.height=H;
+  const ctx=cv.getContext('2d');
+  const mn=Math.min(...prices),mx=Math.max(...prices),rng=mx-mn||1;
+  const pts=prices.map((v,i)=>({x:i/(prices.length-1)*(W-2)+1,y:H-2-(v-mn)/rng*(H-4)}));
+  const p=s.fin?.price||0,cheap=s.overrideCheap||(s.fin?.navCalc?Math.round(s.fin.navCalc*(s.fin.predROE||s.fin.roe||0)/100*30/Math.pow(1.15,8)):0);
+  const color=p>0&&cheap>0&&p<=cheap?'#0a7a3e':p>0&&(s.overridePricey||0)>0&&p>=(s.overridePricey||0)?'#c0392b':'#2563eb';
+  const grad=ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0,color+'33');grad.addColorStop(1,color+'00');
+  ctx.beginPath();ctx.moveTo(pts[0].x,H);pts.forEach(p=>ctx.lineTo(p.x,p.y));ctx.lineTo(pts[pts.length-1].x,H);ctx.closePath();ctx.fillStyle=grad;ctx.fill();
+  ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);pts.slice(1).forEach(p=>ctx.lineTo(p.x,p.y));
+  ctx.strokeStyle=color;ctx.lineWidth=1.5;ctx.stroke();
+  const last=pts[pts.length-1];ctx.beginPath();ctx.arc(last.x,last.y,3,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();
+}
+
+render();
+</script>
+</body>
+</html>
