@@ -360,10 +360,14 @@ async function fetchFin(code){
   let nav=navEqNow>0&&capNow>0?Math.round(navEqNow/(capNow/10)*10)/10:null;
 
   const lastYr=String(yr-1);
-  const meqLY=(meqMap[lastYr]>0?meqMap[lastYr]:0)||(eqMap[lastYr]||0);
+  // navCalc 用去年底淨值，來源與 nav 一致（優先母公司淨值）
+  const meqHasData=Object.keys(meqMap).length>0;
+  const meqLY=meqHasData?(meqMap[lastYr]||0):(eqMap[lastYr]||0);
+  const eqLY=eqMap[lastYr]||0;
+  const navEqLY=meqLY>0?meqLY:eqLY; // 與 nav 用同一來源
   const capLY=capMap[lastYr]||capNow;
   let navCalc=nav;
-  if(meqLY>0&&capLY>0){const n=meqLY/(capLY/10);if(n>1&&n<100000)navCalc=Math.round(n*10)/10;}
+  if(navEqLY>0&&capLY>0){const n=navEqLY/(capLY/10);if(n>1&&n<100000)navCalc=Math.round(n*10)/10;}
 
   // ROE（去年底淨值）
   const roeMap={};
@@ -385,7 +389,7 @@ async function fetchFin(code){
   let ttmEPS=null;
   if(capNow>0){const e=(ttmP-ttmM)/(capNow/10);if(e>0)ttmEPS=Math.round(e*100)/100;}
   let predROE=null;
-  if(meqLY>0){predROE=Math.round((ttmP-ttmM)/meqLY*1000)/10;}
+  if(navEqLY>0){predROE=Math.round((ttmP-ttmM)/navEqLY*1000)/10;}
 
   // 股息（除息年份）
   const divMap={},stMap={};
@@ -424,15 +428,16 @@ async function fetchFin(code){
 
   // 近3年股息中位數（Y2，NAV序列第一年股息）
   const divYrs=Object.keys(divMap).sort().reverse();
-  const r3d=divYrs.slice(0,3).map(y=>divMap[y]).filter(v=>v>0).sort((a,b)=>a-b);
-  const firstDiv=r3d.length?r3d[Math.floor(r3d.length/2)]:(divYrs[0]?divMap[divYrs[0]]:0);
+  // Y2 = 最近一次實際股息（原版用MEDIAN近3年，但最近一次更能反映現況）
+  const r3d=divYrs.slice(0,3).map(y=>divMap[y]).filter(v=>v>0);
+  const firstDiv=r3d.length?r3d[0]:0; // 最近一次股息
 
   // K11 預期配息率
   const r3dr=divYrs.slice(0,3).map(y=>drMap[y]/100).filter(v=>v>0&&v<5);
   const latestPr=Object.keys(prMap).sort().reverse()[0];
   const prNow=latestPr?prMap[latestPr]:0;
   const medDr=r3dr.length?r3dr.sort((a,b)=>a-b)[Math.floor(r3dr.length/2)]:0.65;
-  const k11=Math.max((medDr+(prNow/100))/2,(r3dr.length?Math.min(...r3dr):0.65)*0.9,0.45);
+  const k11=Math.max((medDr+(prNow/100))/2,(r3dr.length?Math.min(...r3dr):0.65)*0.9,0.65);
 
   // 最新股息
   const latestDiv=divYrs.reduce((v,y)=>v||divMap[y],0);
