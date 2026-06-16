@@ -227,7 +227,7 @@ NAV   = 母公司淨值 / 股本 × 10（去年底）
 const FM='eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoic2FuZWkwMjE2IiwiZW1haWwiOiJzYW5laTAyMTZAZ21haWwuY29tIiwidG9rZW5fdmVyc2lvbiI6MH0.-VLDsxQVc_r1-SVVdtgf5EcQv40E-lsnbwjfeeszoi4';
 
 // 版本號：每次修改計算邏輯時更新，自動清除舊的 fin 數據
-const FIN_VERSION='20260614_v9';
+const FIN_VERSION='20260614_v10';
 // 清除過時的財務數據（保留股票列表和持股記錄）
 (()=>{
   const savedVer=localStorage.getItem('fin_version');
@@ -409,6 +409,7 @@ async function fetchFin(code){
   if(capNow>0){const e=(ttmP-ttmM)/(capNow/10);if(e>0)ttmEPS=Math.round(e*100)/100;}
   // predROE = TTM常利 / 去年底淨值（對應原版 V13 = E12/W21）
   // 用 TTM 而非最新年ROE，因為最新年可能是異常年（如5508 2025年大跌）
+  let predROE=null;
   {
     const profRows4=finR.filter(x=>x.type==='IncomeAfterTaxes').sort((a,b)=>b.date.localeCompare(a.date)).slice(0,4);
     const minLY=minMap[lastYr]||0;
