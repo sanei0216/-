@@ -226,6 +226,25 @@ NAV   = 母公司淨值 / 股本 × 10（去年底）
 // ================================================================
 const FM='eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoic2FuZWkwMjE2IiwiZW1haWwiOiJzYW5laTAyMTZAZ21haWwuY29tIiwidG9rZW5fdmVyc2lvbiI6MH0.-VLDsxQVc_r1-SVVdtgf5EcQv40E-lsnbwjfeeszoi4';
 
+// 版本號：每次修改計算邏輯時更新，自動清除舊的 fin 數據
+const FIN_VERSION='20260614_v8';
+// 清除過時的財務數據（保留股票列表和持股記錄）
+(()=>{
+  const savedVer=localStorage.getItem('fin_version');
+  if(savedVer!==FIN_VERSION){
+    // 版本不符：清除所有股票的 fin 數據，強制重新抓
+    ['yz3_stocks','yz2_stocks','yz_stocks'].forEach(k=>{
+      try{
+        const stocks=JSON.parse(localStorage.getItem(k)||'[]');
+        stocks.forEach(s=>{s.fin={};});
+        localStorage.setItem(k,JSON.stringify(stocks));
+      }catch{}
+    });
+    localStorage.setItem('fin_version',FIN_VERSION);
+    console.log(`[盈再表] 財務數據已更新至 ${FIN_VERSION}`);
+  }
+})();
+
 // ================================================================
 // 資料架構：
 // s.fin = 從 FinMind 抓到的原始財務數據（不存 cheap/pricey）
@@ -388,8 +407,10 @@ async function fetchFin(code){
   const ttmM=minMap[lastFullYr]||0; // 用去年全年少數股東
   let ttmEPS=null;
   if(capNow>0){const e=(ttmP-ttmM)/(capNow/10);if(e>0)ttmEPS=Math.round(e*100)/100;}
-  let predROE=null;
-  if(navEqLY>0){predROE=Math.round((ttmP-ttmM)/navEqLY*1000)/10;}
+  // predROE = 最新完整年 ROE（對應原版 V13）
+  // 實際上等同於用歷年ROE的最新值，比TTM重算更穩定
+  const roeYrs=Object.keys(roeMap).sort().reverse();
+  const predROE=roeYrs.length?Math.round(roeMap[roeYrs[0]]*10)/10:null;
 
   // 股息（除息年份）
   const divMap={},stMap={};
